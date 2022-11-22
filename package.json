@@ -1,7 +1,7 @@
 {
   "name": "config-updater",
   "version": "0.3.0",
-  "description": "Update config-dictionaries from configurable repositories (default: process.env)",
+  "description": "Update config-dictionaries from configurable repositories (process.env and others)",
   "main": "index.js",
   "author": "Thomas von Stetten",
   "license": "MIT",

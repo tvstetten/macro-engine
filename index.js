@@ -190,8 +190,8 @@ class ConfigUpdater {
      * @returns {boolean} `true` if the repository could be deleted. `false` otherwise
      */
     unregister(name) {
-        for (i = 0; i < this.repositories.length; i++) {
-            if (this.repositories[i][0] == name) {
+        for (let i = 0; i < this.#repositories.length; i++) {
+            if (this.#repositories[i][0] == name) {
                 this.#repositories.splice(i, 1)
                 return true
             }
@@ -205,7 +205,9 @@ class ConfigUpdater {
      */
     getRepositoryNames() {
         const result = []
-        for (item in this.#repositories) result.push(item[0])
+        for (let item of this.#repositories) {
+            result.push(item[0])
+        }
         return result
     }
 
@@ -265,7 +267,7 @@ class ConfigUpdater {
             const namePath = searchKey.split("/")
             for (const repository of this.#repositories) {
                 // repository[0]=function; repository[1]=repository(-data?)
-                result = repository[0](repository[1], namePath)
+                result = repository[1](repository[2], namePath)
                 // value found? => we're done
                 if (result !== undefined) {
                     break
