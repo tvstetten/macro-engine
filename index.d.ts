@@ -14,9 +14,10 @@ export const configUpdater: ConfigUpdater;
  #*/
 /**
  * Config-Macro (CM)
+ * The config-macro is the official way to create
  */
 export class CM {
-    static CM_KEY: string;
+    static KEY_KEY: string;
     static DEFAULT_KEY: string;
     static MANDATORY_KEY: string;
     static CALLBACK_KEY: string;
@@ -41,7 +42,6 @@ export class CM {
  *
  * @license MIT
  * @author Thomas von Stetten.
- * @version 0.1.0
  */
 /**
  * Error-Class for the Config-Helper-System
@@ -94,7 +94,7 @@ declare class ConfigUpdater {
     /**
      * Retrieve the value of a property using registered repositories (environment,...)
      *
-     * Function checks if `<property>` is an object that contains CM-keywords \
+     * Function checks if `cm_or_any` is an object that contains CM-keywords \
      * (`{$$: [?]<propertyKey>[, $default: <CM>|<value>]}`).\
      * In this case the according environment variable gets returned. \
      * If the value of `propertyKey` starts with a '?' the ? will
@@ -113,43 +113,42 @@ declare class ConfigUpdater {
      * - parentPropertyKey="yyyyy", property = {$$: "?_PROP",
      *      $default: "prop-undefined"} => "prop-undefined"
      * @access private
-     * @param {CM|any}  cm_or_any           Any property-value. If the value is an object that's
-     * @param {string}  propertyKey        The name of the current property. Used only for error-message
-     * @param {string}  parentPropertyKey  Name of the property that contains `propertyKey`
+     * @param {CM|any}  cm_or_any  Any property-value. If the value is an object that represent a CM or has the CM-properties it's handled as a macro
+     * @param {Array}   path       Represent the path to the property. Must be arn array!
      * @return {any} Either the original `cm_or_any`, the value retrieved from a repository, a default or `undefined`.
      * @throws CuError  If the value of the $$-property inside the CM-Object is empty or no string.
      * @see toCm
      * @see updateConfig
      */
-    getCmValue(cm_or_any: CM | any, propertyKey: string, parentPropertyKey: string): any;
+    getCmValue(cm_or_any: CM | any, path: any[]): any;
     /**
      * Replace the value of `variableName` with a defined value in the repositories.
      *
-     * It allows to (nested) use default-CM-definitions (or simple values)\
-     * It also allows the usage of the Branch-Name as a prefix
-     * @param {string} propertyKey            Name of the key that will be searched
-     * @param {CM|any} defaultValue=undefined  Optional default-value
-     * @param {string} parentPropertyKey=""   Optional name of a parent-object (for error-messages)
+     * It allows to retrieve simple values from the repositories \
+     * It also allows the usage of the parent-key as a prefix of the key-name
+     * @param {string} propertyKey               Name of the key that will be searched
+     * @param {CM|any} defaultValue=undefined    Optional default-value
+     * @param {Array|string} parentKeyOrPath=[]  Optional names of a parent-object (for error-messages)
      * @returns {any}  Either the substituted value or undefined
      * @access public
      */
-    getValue(propertyKey: string, defaultValue?: CM | any, parentPropertyKey?: string): any;
+    getValue(propertyKey: string, defaultValue?: CM | any, parentKeyOrPath?: any[] | string): any;
     /**
      * Replace all macros with values from the `configUpdater`.
      *
      * The function traverses through the whole `config`-object-tree, determines \
      * existing config-macros (=CU, format `{$$, [$default]}`) and replaces their value with
      * values of the registered repositories.\
-     * If the parent-property has a property '_fallback_' all sub-properties of that \
+     * If the parent-property has a property '$defaults' all sub-properties of that \
      * fallback are copied to every sibling-object as far as they don't exist already.
 
      * So the values of `config` get changed!
-     * @param {object|array} config                 Any Object whose properties should be updated with values of the configUpdater
-     * @param {Array}        exclude=[]             Optional array of property-names that should not be handled (at any level)
-     * @param {string}       initialParentpropertyKey=""  Optional name of the parent property. Used to add the branch-name for $$: "?..." replacements. This is *only* necessary if the function is called with a partial branch.
+     * @param {object|array} config               Any Object whose properties should be updated with values of the configUpdater
+     * @param {Array}        exclude=[]           Optional array of property-names that should not be handled (at any level)
+     * @param {string}       initialParentKey=""  Optional name of the parent property. Used to add the branch-name for $$: "?..." replacements. This is *only* necessary if the function is called with a partial branch.
      * @returns {Object|Array} Returns the given `config`-parameter-object
      */
-    updateConfig(config: object | any[], exclude?: any[], initialParentpropertyKey?: string): any | any[];
+    updateConfig(config: object | any[], exclude?: any[], initialParentKey?: string): any | any[];
     #private;
 }
 export { configUpdater as cu };

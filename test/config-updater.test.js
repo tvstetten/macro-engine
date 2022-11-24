@@ -1,6 +1,6 @@
 const { expect, assert } = require("chai")
 
-const { configUpdater, cu, CM, CuError } = require("../index")
+const { configUpdater, cu, CM, cmf } = require("../index")
 
 describe("CU - Config-Updater-System", function () {
     this.timeout(500000) // For debugging purposes
@@ -22,8 +22,8 @@ describe("CU - Config-Updater-System", function () {
                 cu.getRepositoryNames().toString(),
                 "env,added1,added2"
             )
-            assert.equal(cu.getValue("add1x"), 11)
-            assert.equal(cu.getValue("add2x"), 21)
+            assert.equal(cu.getValue("add1x", undefined, "parent"), 11)
+            assert.equal(cu.getValue("add2x", undefined, ["parent!"]), 21)
         })
         it("Register repositories (at the beginning and at position x)", function () {
             cu.register("added1", { add1x: 11 }, 0)
@@ -107,61 +107,95 @@ describe("CU - Config-Updater-System", function () {
         describe("Constructor & properties", function () {
             it("Create CM, no default", function () {
                 const cm = new CM("test")
-                assert.equal(cm[CM.CM_KEY], "test")
+                assert.equal(cm[CM.KEY_KEY], "test")
+                assert.equal(cm[CM.DEFAULT_KEY], undefined)
+            })
+            it("Create CM, no default", function () {
+                const cm = new CM("test")
+                assert.equal(cm[CM.KEY_KEY], "test")
                 assert.equal(cm[CM.DEFAULT_KEY], undefined)
             })
             it("create CM, with default", function () {
                 const cm = new CM("test", "_default")
-                assert.equal(cm[CM.CM_KEY], "test")
+                assert.equal(cm[CM.KEY_KEY], "test")
                 assert.equal(cm[CM.DEFAULT_KEY], "_default")
+
+                cm.default()
+                assert(!cm.hasOwnProperty(CM.DEFAULT_KEY))
+                cm.default(undefined)
+                assert(!cm.hasOwnProperty(CM.DEFAULT_KEY))
+                // null is handled like undefined
+                cm.default(null)
+                assert(!cm.hasOwnProperty(CM.DEFAULT_KEY))
+                // set some bool() = false but not undefined values
+                cm.default("")
+                assert(cm.hasOwnProperty(CM.DEFAULT_KEY))
+                cm.default(0)
+                assert(cm.hasOwnProperty(CM.DEFAULT_KEY))
+                cm.default(false)
+                assert(cm.hasOwnProperty(CM.DEFAULT_KEY))
             })
-            it("create CM with empty name", function () {
+            it("create CM, empty name", function () {
                 expect(() => {
-                    CM.cm("")
+                    cmf("")
                 }).to.throw()
             })
-            it("create CM(template)", function () {
+            it("custom CM, no key-name", function () {
+                expect(() => {
+                    cu.getCmValue({ $$: "" })
+                }).to.throw()
+            })
+            it("custom CM, non-string key-name-value", function () {
+                expect(() => {
+                    cu.getCmValue({ $$: 123 })
+                }).to.throw()
+            })
+            it("create CM, copy from another cm-instance", function () {
                 cm1 = new CM("key", "default", true, true, (value) => {
                     return value
                 })
-                cm2 = CM.cm(cm1)
-                assert.equal(cm1[CM.CM_KEY], cm2[CM.CM_KEY])
+                cm2 = cmf(cm1)
+                assert.equal(cm1[CM.KEY_KEY], cm2[CM.KEY_KEY])
                 assert.equal(cm1[CM.DEFAULT_KEY], cm2[CM.DEFAULT_KEY])
                 assert.equal(cm1[CM.MANDATORY_KEY], cm2[CM.MANDATORY_KEY])
                 assert.equal(cm1[CM.CALLBACK_KEY], cm2[CM.CALLBACK_KEY])
             })
-            it("create CM with non-string name", function () {
-                expect(() => {
-                    new CM(false)
-                }).to.throw("variableName")
+            it("create CM, non-string key-name", function () {
+                expect(() => new CM(false)).to.throw()
             })
             it("create CM, parent-property-dependent", function () {
-                const cm1 = new CM("test", undefined, true) // create with on
-                assert(cm1[CM.CM_KEY].startsWith(CM.PARENT_DEPENDENT_INDICATOR))
+                const cm1 = new CM("?test", undefined) // create with on
+                assert(
+                    cm1[CM.KEY_KEY].startsWith(CM.PARENT_DEPENDENT_INDICATOR)
+                )
                 cm1.parentDependent(false) // switch off
                 assert(
-                    !cm1[CM.CM_KEY].startsWith(CM.PARENT_DEPENDENT_INDICATOR)
+                    !cm1[CM.KEY_KEY].startsWith(CM.PARENT_DEPENDENT_INDICATOR)
                 )
                 cm1.parentDependent(true) // switch on
-                assert(cm1[CM.CM_KEY].startsWith(CM.PARENT_DEPENDENT_INDICATOR))
+                assert(
+                    cm1[CM.KEY_KEY].startsWith(CM.PARENT_DEPENDENT_INDICATOR)
+                )
 
                 const cm2 = new CM("test", undefined, false) // create with off
                 assert(
-                    !cm2[CM.CM_KEY].startsWith(CM.PARENT_DEPENDENT_INDICATOR)
+                    !cm2[CM.KEY_KEY].startsWith(CM.PARENT_DEPENDENT_INDICATOR)
                 )
 
                 const cm3 = new CM("test", undefined, "") // create with off
                 assert(
-                    !cm3[CM.CM_KEY].startsWith(CM.PARENT_DEPENDENT_INDICATOR)
+                    !cm3[CM.KEY_KEY].startsWith(CM.PARENT_DEPENDENT_INDICATOR)
                 )
             })
             it("create CM, mandatory", function () {
-                const cm1 = new CM("test", undefined, false, true)
+                const cm1 = new CM("test", undefined).mandatory(true)
                 assert(cm1[CM.MANDATORY_KEY])
                 cm1.mandatory(false)
                 assert(!cm1.hasOwnProperty(CM.MANDATORY_KEY))
                 cm1.mandatory(true)
                 assert(cm1[CM.MANDATORY_KEY])
+
+                expect(() => cu.getCmValue(cm1, [])).to.throw()
 
                 const cm2 = new CM("test", undefined, false, false)
                 assert(!cm2.hasOwnProperty(CM.MANDATORY_KEY))
@@ -170,7 +204,7 @@ describe("CU - Config-Updater-System", function () {
                 const f = (value) => {
                     return value
                 }
-                const cm1 = new CM("test", undefined, false, false, f)
+                const cm1 = new CM("test").callback(f)
                 assert(cm1[CM.CALLBACK_KEY])
                 cm1.callback(false)
                 assert(!cm1.hasOwnProperty(CM.CALLBACK_KEY))
@@ -181,15 +215,26 @@ describe("CU - Config-Updater-System", function () {
                 assert(!cm2.hasOwnProperty(CM.CALLBACK_KEY))
             })
         })
-        describe("callback execution", function () {
+        describe("callback", function () {
             it("simple callback-call", function () {
                 const f = (value) => {
                     return ">" + value.toString() + "<"
                 }
                 cu.register("test", { prop1: "propVal1", prop2: "propVal2" })
-                const cm = CM.cm("prop1").callback(f)
+                const cm = cmf("prop1").callback(f)
 
-                assert.equal(cu.getCmValue(cm, "test", ""), f("propVal1"))
+                assert.equal(cu.getCmValue(cm, []), f("propVal1"))
+            })
+            it("Invalid callback-type throws an exception", function () {
+                // exception during definition
+                expect(() => cmf("prop1").callback("f")).to.throw()
+
+                // create a CM-object-like object manually
+                const cm = {}
+                cm[CM.KEY_KEY] = "xxx"
+                cm[CM.CALLBACK_KEY] = "?"
+                // raise the exception before callback is called
+                expect(() => cu.getCmValue(cm, [])).to.throw()
             })
         })
     })
@@ -208,7 +253,7 @@ describe("CU - Config-Updater-System", function () {
             ) // with highest priority
 
             repWithFallback = {
-                _fallback_: {
+                $defaults: {
                     prop: "1.2.3",
                     url: "http://localhost:1234",
                     onlyInFallback: "fromFallback",
@@ -223,7 +268,7 @@ describe("CU - Config-Updater-System", function () {
                     },
                 },
                 branchEmpty: {
-                    // no properties -> all properties taken from the _fallback_
+                    // no properties -> all properties taken from the $defaults
                 },
                 branchWithValue: {
                     prop: "0.1.2.3",
@@ -269,7 +314,7 @@ describe("CU - Config-Updater-System", function () {
                 {
                     version: "0.4.24",
                     branch: {
-                        _fallback_: {
+                        $defaults: {
                             url: "fallback-url",
                             urlEnv: { $$: "URL" },
                             urlBranchEnv: {
@@ -279,7 +324,7 @@ describe("CU - Config-Updater-System", function () {
                         },
                         subObj1: {
                             url: "subObj-url/",
-                            // _fallback_->urlBranchEnv: ?URL (subObj1:URL) is defined!,
+                            // $defaults->urlBranchEnv: ?URL (subObj1:URL) is defined!,
                         },
                         subObj2: {
                             prop: "subObj-prop/",
@@ -301,7 +346,7 @@ describe("CU - Config-Updater-System", function () {
                 },
                 noFallback: {
                     branch: {
-                        // Empty and there is no _fallback_ branch
+                        // Empty and there is no $defaults branch
                     },
                 },
                 deep: {
@@ -336,15 +381,15 @@ describe("CU - Config-Updater-System", function () {
             )
 
             assert.equal(conf["url"], "http://127.0.0.1:1111/")
-            assert.equal(conf["urlEnv"][CM.CM_KEY], "URL") // filtered
+            assert.equal(conf["urlEnv"][CM.KEY_KEY], "URL") // filtered
             assert.equal(conf["urlBranchEnv"], "branchEnvLookup_URL")
         })
 
         it("Config-Object with fallback", () => {
             const conf = configUpdater.updateConfig(repWithFallback)
 
-            // All _fallback_ properties stay unchanged
-            const bf = conf["_fallback_"]
+            // All $defaults properties stay unchanged
+            const bf = conf["$defaults"]
             assert.equal(bf["onlyFallbackEnv"]["$$"], "URL") // unchanged
             assert.equal(bf["onlyFallbackBranchEnv"]["$$"], "?_URL") // unchanged
             assert.equal(bf["onlyFallbackBranchEnvDefault"]["$$"], "?_URLXX") // unchanged
@@ -354,7 +399,7 @@ describe("CU - Config-Updater-System", function () {
             assert.equal(b1["urlEnv"], "env-url")
             assert.equal(b1["urlBranchEnv"], "branchEnvLookup_URL")
 
-            // Properties from the _fallback_ branch
+            // Properties from the $defaults branch
             assert.equal(b1["prop"], "1.2.3")
             assert.equal(b1["onlyInFallback"], "fromFallback")
             assert.equal(b1["onlyFallbackEnv"], "env-url")

@@ -3,9 +3,12 @@ scripts
 test
 docs
 node_modules
+coverage
 **/.*
+**/.zz
+**/zz
 support/
-coverage.html
+coverage.*
 component.json
 lib-cov
 .travis.yml

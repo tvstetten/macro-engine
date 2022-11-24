@@ -1,11 +1,13 @@
 {
   "name": "config-updater",
-  "version": "0.3.0",
   "description": "Update config-dictionaries from configurable repositories (process.env and others)",
-  "main": "index.js",
   "author": "Thomas von Stetten",
   "license": "MIT",
+  "version": "0.3.0",
+  "main": "index.js",
+  "types": "index.d.ts",
   "keywords": [
+    "config-updater",
     "config",
     "env",
     "environment",
@@ -13,13 +15,20 @@
     "configuration",
     "config-management"
   ],
+  "readmeFilename": "README.md",
   "scripts": {
     "test": "mocha",
+    "coverage": "c8 --reporter=text mocha",
     "ts-types": "npx -p typescript tsc *.js --declaration --allowJs --emitDeclarationOnly --outDir ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/tvstetten/config-updater.git"
   },
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^18.11.9",
+    "c8": "^7.12.0",
     "chai": "^4.3.7",
     "mocha": "^10.1.0"
   }
